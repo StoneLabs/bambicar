@@ -1,12 +1,18 @@
+import sys
 import obd
 
 obd.logger.setLevel(obd.logging.DEBUG) # enables all debug information
 
 connection = obd.OBD() # auto-connects to USB or RF port
 
-cmd = obd.commands.SPEED # select an OBD command (sensor)
+import test_graph
+while True:
+    response = connection.query(obd.commands.SPEED) # send the command, and parse the response
 
-response = connection.query(cmd) # send the command, and parse the response
+    if response.value == None:
+        print("SUCCESS - NO")
+    else:
+        print("SUCCESS - KPH VALUE: " + str(response.value)) # user-friendly unit conversions
+        test_graph.addData(0, 0, int(str(response.value.to("kph")).split(" ")[0]))
 
-print(response.value) # returns unit-bearing values thanks to Pint
-print(response.value.to("kph")) # user-friendly unit conversions
+

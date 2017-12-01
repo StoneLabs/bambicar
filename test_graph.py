@@ -73,17 +73,18 @@ def addData(thrust, steering, speed):
 
 	application.processEvents()
 	
-try:
-	addData(0,0,0)
-	# Main loop
-	for i in range(0, 100000):
-		addData(max(min(data_thrust_y[-1] + random.uniform(-5, 5), 100), -100),
-				max(min(data_steering_y[-1] + random.uniform(-5, 5), 540), -540),
-				max(min(data_speed_y[-1] + random.uniform(-5, 5), 200), 000))
-		time.sleep(0.05)
+#try:
+#	addData(0,0,0)
+#	# Main loop
+#	for i in range(0, 100000):
+#		addData(max(min(data_thrust_y[-1] + random.uniform(-5, 5), 100), -100),
+#				max(min(data_steering_y[-1] + random.uniform(-5, 5), 540), -540),
+#				max(min(data_speed_y[-1] + random.uniform(-5, 5), 200), 000))
+#		time.sleep(0.05)
+
+#except KeyboardInterrupt:
+#	print("Aborted.")
 
 
-except KeyboardInterrupt:
-	print("Aborted.")
 
-application.exec()
+#application.exec()
