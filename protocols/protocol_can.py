@@ -31,12 +31,13 @@
 ########################################################################
 
 from binascii import unhexlify
-from obd.utils import contiguous
+from .protocol import contiguous
 from .protocol import Protocol, Message, Frame, ECU
-
+import sys
 import logging
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stdout)
+logger = logging.getLogger("ELMAPI")
 
 
 class CANProtocol(Protocol):

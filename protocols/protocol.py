@@ -31,11 +31,12 @@
 ########################################################################
 
 from binascii import hexlify
-from obd.utils import isHex, bitarray
-
+import string
+import sys
 import logging
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stdout)
+logger = logging.getLogger("ELMAPI")
 
 
 """
@@ -44,6 +45,74 @@ Basic data models for all protocols to use
 
 """
 
+class bitarray:
+    """
+    Class for representing bitarrays (inefficiently)
+
+    There's a nice C-optimized lib for this: https://github.com/ilanschnell/bitarray
+    but python-OBD doesn't use it enough to be worth adding the dependency.
+    But, if this class starts getting used too much, we should switch to that lib.
+    """
+
+    def __init__(self, _bytearray):
+        self.bits = ""
+        for b in _bytearray:
+            v = bin(b)[2:]
+            self.bits += ("0" * (8 - len(v))) + v # pad it with zeros
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            if key >= 0 and key < len(self.bits):
+                return self.bits[key] == "1"
+            else:
+                return False
+        elif isinstance(key, slice):
+            bits = self.bits[key]
+            if bits:
+                return [ b == "1" for b in bits ]
+            else:
+                return []
+
+    def num_set(self):
+        return self.bits.count("1")
+
+    def num_cleared(self):
+        return self.bits.count("0")
+
+    def value(self, start, stop):
+        bits = self.bits[start:stop]
+        if bits:
+            return int(bits, 2)
+        else:
+            return 0
+
+    def __len__(self):
+        return len(self.bits)
+
+    def __str__(self):
+        return self.bits
+
+    def __iter__(self):
+        return [ b == "1" for b in self.bits ].__iter__()
+
+def isHex(_hex):
+    return all([c in string.hexdigits for c in _hex])
+
+def contiguous(l, start, end):
+    """ checks that a list of integers are consequtive """
+    if not l:
+        return False
+    if l[0] != start:
+        return False
+    if l[-1] != end:
+        return False
+
+    # for consequtiveness, look at the integers in pairs
+    pairs = zip(l, l[1:])
+    if not all([p[0]+1 == p[1] for p in pairs]):
+        return False
+
+    return True
 
 class ECU:
     """ constant flags used for marking and filtering messages """

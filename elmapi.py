@@ -1,9 +1,55 @@
 import logging
-from obd.elm327 import ELM327
-from obd.utils import scan_serial, OBDStatus
+import serial
+import errno
+import sys
+import glob
+from elm327 import ELM327, OBDStatus
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stdout)
+logger = logging.getLogger("ELMAPI")
 
+def try_port(portStr):
+    """returns boolean for port availability"""
+    try:
+        s = serial.Serial(portStr)
+        s.close() # explicit close 'cause of delayed GC in java
+        return True
+
+    except serial.SerialException:
+        pass
+    except OSError as e:
+        if e.errno != errno.ENOENT: # permit "no such file or directory" errors
+            raise e
+
+    return False
+
+def scan_serial():
+    """scan for available ports. return a list of serial names"""
+    available = []
+
+    possible_ports = []
+
+    if sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+        possible_ports += glob.glob("/dev/rfcomm[0-9]*")
+        possible_ports += glob.glob("/dev/ttyUSB[0-9]*")
+    elif sys.platform.startswith('win'):
+        possible_ports += ["\\.\COM%d" % i for i in range(256)]
+
+    elif sys.platform.startswith('darwin'):
+        exclude = [
+            '/dev/tty.Bluetooth-Incoming-Port',
+            '/dev/tty.Bluetooth-Modem'
+        ]
+        possible_ports += [port for port in glob.glob('/dev/tty.*') if port not in exclude]
+
+    for port in possible_ports:
+        if try_port(port):
+            available.append(port)
+
+    return available
+
+def enableDebug():
+    logger.setLevel(logging.DEBUG)
 
 class ELMAPI:
     interface = None
@@ -24,20 +70,26 @@ class ELMAPI:
 
         for port in portnames:
             logger.info("Attempting to use port: " + str(port))
-            interface = ELM327(port, baudrate, protocol)
+            self.interface = ELM327(port, baudrate, protocol)
 
-            if interface.status() == OBDStatus.CAR_CONNECTED:
+            if self.interface.status() == OBDStatus.CAR_CONNECTED:
                 break # success! stop searching for serial
 
-        if interface.status() != OBDStatus.CAR_CONNECTED:
-            print("Could not connect to any of the given ports")
+        if self.interface.status() != OBDStatus.CAR_CONNECTED:
+            logger.warning("Could not connect to any of the given ports")
             exit(1)
 
-            print("Connection succesfull")
-            print(" Port:\t\t" + interface.port_name())
-            print(" Protocol id:\t" + interface.protocol_id())
-            print(" Protocol name:\t" + interface.protocol_name())
-            if interface.protocol_id() in ["6", "7", "8", "9"]:
-                print(" Protocol mode:\t[ CAN ]")
-            else:
-                print(" Protocol mode:\t[NOCAN]")
+        logger.info("Connection succesfull")
+        logger.info(" Port:\t\t" + self.interface.port_name())
+        logger.info(" Protocol id:\t" + self.interface.protocol_id())
+        logger.info(" Protocol name:\t" + self.interface.protocol_name())
+        if self.interface.protocol_id() in ["6", "7", "8", "9"]:
+            logger.info(" Protocol mode:\t[ CAN ]")
+        else:
+            logger.info(" Protocol mode:\t[NOCAN]")
+
+    def send_and_parse(self, cmd):
+        if self.interface.status() != OBDStatus.CAR_CONNECTED:
+            logger.warning("No car connected")
+            exit(1)
+        return self.interface.send_and_parse(cmd)

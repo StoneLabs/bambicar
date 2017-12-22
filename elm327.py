@@ -34,11 +34,18 @@ import re
 import serial
 import time
 import logging
-from .protocols import *
-from .utils import OBDStatus
+import sys
+from protocols import *
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(stream=sys.stdout)
+logger = logging.getLogger("ELMAPI")
 
+class OBDStatus:
+    """ Values for the connection status flags """
+
+    NOT_CONNECTED = "Not Connected"
+    ELM_CONNECTED = "ELM Connected"
+    CAR_CONNECTED = "Car Connected"
 
 class ELM327:
     """
@@ -422,7 +429,8 @@ class ELM327:
         else:
             logger.info("cannot perform __write() when unconnected")
 
-
+    def reader(self):
+        return self.__read()
     def __read(self):
         """
             "low-level" read function
